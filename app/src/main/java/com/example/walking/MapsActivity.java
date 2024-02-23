@@ -113,9 +113,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if ((ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED)
-//                | (ContextCompat.checkSelfPermission(this,
-//                        Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
-//                        PackageManager.PERMISSION_GRANTED)
+                | (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
+                        PackageManager.PERMISSION_GRANTED)
         ){
             Log.d(TAG,"second false");
             checkPermissionsInit();
@@ -134,12 +134,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Log.d(TAG,"just requested location, about to return.");
             return;
         }
-//        if (ContextCompat.checkSelfPermission(this,
-//                Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            requestAppBackgroundPermissions();
-//            Log.d(TAG,"just requested background, about to return.");
-//            return;
-//        }
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestAppBackgroundPermissions();
+            Log.d(TAG,"just requested background, about to return.");
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this,
                     Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -176,6 +176,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void requestAppBackgroundPermissions() {
 
         Log.d(TAG,"About to request background permission 1");
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
+            return;
 
         ActivityCompat.requestPermissions(this,
                 new String[]{
