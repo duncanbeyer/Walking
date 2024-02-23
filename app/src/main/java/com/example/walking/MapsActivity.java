@@ -20,6 +20,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import androidx.core.splashscreen.SplashScreen;
+
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -40,8 +42,10 @@ import java.util.ArrayList;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapsActivity";
+    private boolean keepOn = true;
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
+
     private ArrayList<String> routeNames = new ArrayList<>();
     private static final int LOCATION_REQUEST = 111;
     private static final int NOTIFICATION_REQUEST = 222;
@@ -61,6 +65,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        initSplash();
+
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -87,12 +94,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
         mMap.getUiSettings().setRotateGesturesEnabled(false);
         mMap.getUiSettings().setZoomControlsEnabled(true);
-        mMap.getUiSettings().setMapToolbarEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
+        mMap.getUiSettings().setMapToolbarEnabled(true);
+
 
         if (checkPermission()) {
             setupLocationListener();
         }
+    }
+
+    private void initSplash() {
+        SplashScreen.installSplashScreen(this)
+                .setKeepOnScreenCondition(
+                        new SplashScreen.KeepOnScreenCondition() {
+                            @Override
+                            public boolean shouldKeepOnScreen() {
+                                return keepOn;
+                            }
+                        }
+                );
     }
 
 
@@ -156,7 +176,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         setupLocationListener();
-//        keepOn = false;
 
     }
 
@@ -249,6 +268,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setupLocationListener() {
+        keepOn = false;
+
+//        mMap.getUiSettings().setMapToolbarEnabled(false);
+
+        Log.d(TAG, "toolbar enabled: " + String.valueOf(mMap.getUiSettings().isMapToolbarEnabled()));
+
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -336,7 +361,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 //        binding.blackLayout.setVisibility(View.VISIBLE);
 
-//        keepOn = false;
+        keepOn = false;
 
         LayoutInflater inflater = getLayoutInflater();
         View dialog = inflater.inflate(R.layout.alert_layout, null);
