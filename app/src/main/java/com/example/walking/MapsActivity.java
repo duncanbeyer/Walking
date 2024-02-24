@@ -95,8 +95,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setRotateGesturesEnabled(false);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
-        mMap.getUiSettings().setMapToolbarEnabled(true);
-
+        mMap.getUiSettings().setMapToolbarEnabled(false);
 
         if (checkPermission()) {
             setupLocationListener();
@@ -114,6 +113,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                 );
     }
+
 
 
     private boolean checkPermission() {
