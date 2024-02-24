@@ -55,6 +55,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Polyline llHistoryPolyline;
     private final ArrayList<LatLng> latLonHistory = new ArrayList<>();
     private Marker walker;
+    private boolean notificationPermissionGranted = false;
+    private boolean locationPermissionGranted = false;
+    private boolean backgroundPermissionGranted = false;
+    private boolean mapReady = false;
     public static int screenHeight;
     public static int screenWidth;
     private final float zoomDefault = 15.0f;
@@ -65,6 +69,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            backgroundPermissionGranted = true;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionGranted = true;
+        }
 
         initSplash();
 
@@ -97,7 +108,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.getUiSettings().setMapToolbarEnabled(false);
 
-        if (checkPermission()) {
+        mapReady = true;
+
+            if (checkPermission()) {
             setupLocationListener();
         }
     }
@@ -119,28 +132,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean checkPermission() {
         Log.d(TAG,"in checkPermission");
 
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Log.d(TAG, "tiramisu true");
-            if (ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.POST_NOTIFICATIONS) !=
-                    PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "no notifi perm");
+        if (!notificationPermissionGranted) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Log.d(TAG, "tiramisu true");
+                if (ContextCompat.checkSelfPermission(this,
+                        android.Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED) {
+                    Log.d(TAG, "no notifi perm");
+                    checkPermissionsInit();
+                    return false;
+                } else notificationPermissionGranted = true;
+            } else notificationPermissionGranted = true;
+        }
+        if (!locationPermissionGranted | backgroundPermissionGranted) {
+            if ((ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                    PackageManager.PERMISSION_GRANTED)
+                    | (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
+                    PackageManager.PERMISSION_GRANTED)
+            ) {
+                Log.d(TAG, "second false");
                 checkPermissionsInit();
                 return false;
+            } else {
+                locationPermissionGranted = true;
+                backgroundPermissionGranted = true;
             }
         }
-        if ((ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION) !=
-                PackageManager.PERMISSION_GRANTED)
-                | (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
-                        PackageManager.PERMISSION_GRANTED)
-        ){
-            Log.d(TAG,"second false");
-            checkPermissionsInit();
-            return false;
-        }
+
         Log.d(TAG,"it has permissions in checkPermission()");
         return true;
     }
@@ -148,24 +168,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private void checkPermissionsInit() {
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestAppLocationPermissions();
-            Log.d(TAG,"just requested location, about to return.");
-            return;
-        }
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestAppBackgroundPermissions();
-            Log.d(TAG,"just requested background, about to return.");
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (!locationPermissionGranted) {
             if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestAppNotificationPermissions();
-                Log.d(TAG,"just requested notif, about to return.");
+                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestAppLocationPermissions();
+                Log.d(TAG,"just requested location, about to return.");
                 return;
+            }
+        }
+        if (!backgroundPermissionGranted) {
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestAppBackgroundPermissions();
+                Log.d(TAG, "just requested background, about to return.");
+                return;
+            }
+        }
+        if (!notificationPermissionGranted) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestAppNotificationPermissions();
+                    Log.d(TAG, "just requested notif, about to return.");
+                    return;
+                }
             }
         }
         try {
@@ -182,11 +208,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void requestAppLocationPermissions() {
 
         Log.d(TAG,"About to request location permission 1");
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
+        {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{
+                            android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_REQUEST);
+        }
+        else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{
+                            android.Manifest.permission.ACCESS_FINE_LOCATION,
+                            android.Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                    LOCATION_REQUEST);
+        }
 
-        ActivityCompat.requestPermissions(this,
-                new String[]{
-                        android.Manifest.permission.ACCESS_FINE_LOCATION},
-                LOCATION_REQUEST);
 
         Log.d(TAG,"About to request location permission 2");
 
@@ -198,6 +234,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
             return;
+
+        Log.d(TAG,"build version is " + Build.VERSION.SDK_INT);
+        Log.d(TAG,"1 is " + Build.VERSION_CODES.Q);
 
         ActivityCompat.requestPermissions(this,
                 new String[]{
@@ -235,6 +274,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (permissions[0].equals(android.Manifest.permission.ACCESS_FINE_LOCATION)) {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.d(TAG, "location permission granted");
+                    locationPermissionGranted = true;
                     checkPermissionsInit();
                 } else {
                     Log.d(TAG, "location permission denied");
@@ -245,6 +285,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         else if (requestCode == BACKGROUND_REQUEST) {
             if (permissions[0].equals(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    backgroundPermissionGranted = true;
                     Log.d(TAG, "background permission granted");
                     checkPermissionsInit();
                 } else {
@@ -256,6 +297,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         else if (requestCode == NOTIFICATION_REQUEST) {
             if (permissions[0].equals(Manifest.permission.POST_NOTIFICATIONS)) {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    notificationPermissionGranted = true;
                     Log.d(TAG, "notification permission granted");
                     checkPermissionsInit();
                 } else {
@@ -297,7 +339,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onResume() {
         super.onResume();
-        if (checkPermission() && (locationManager != null) && (locationListener != null))
+        Log.d(TAG,"onResume");
+        if (locationPermissionGranted && notificationPermissionGranted && backgroundPermissionGranted && mapReady && checkPermission() && (locationManager != null) && (locationListener != null))
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 10, locationListener);
     }
 
