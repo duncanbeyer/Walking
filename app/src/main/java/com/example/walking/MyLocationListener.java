@@ -10,18 +10,18 @@ import com.example.walking.MapsActivity;
 
 public class MyLocationListener implements LocationListener {
 
-    private final MapsActivity mainActivity;
-    private static final String TAG = "MyLocListener";
+    private final MapsActivity mapsActivity;
+    private static final String TAG = "MyLocationListener";
 
     MyLocationListener(MapsActivity mainActivity) {
 
-        this.mainActivity = mainActivity;
+        this.mapsActivity = mainActivity;
 
     }
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
         Log.d(TAG, "onLocationChanged: " + location);
-        mainActivity.updateLocation(location);
+        mapsActivity.updateLocation(location);
     }
 }

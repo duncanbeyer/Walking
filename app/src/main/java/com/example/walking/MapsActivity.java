@@ -62,6 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public static int screenHeight;
     public static int screenWidth;
     private final float zoomDefault = 15.0f;
+    private boolean requesting = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +78,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             notificationPermissionGranted = true;
         }
 
-        initSplash();
+//        initSplash();
 
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -101,12 +102,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap = googleMap;
 
-        mMap.setBuildingsEnabled(true);
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
-        mMap.getUiSettings().setRotateGesturesEnabled(false);
-        mMap.getUiSettings().setZoomControlsEnabled(true);
-        mMap.getUiSettings().setCompassEnabled(true);
-        mMap.getUiSettings().setMapToolbarEnabled(false);
+
+        LatLng markerLocation = new LatLng(41.8661, -87.617020);
+        mMap.addMarker(new MarkerOptions().position(markerLocation).title("Field Museum Marker"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerLocation, 17.0f));
+
+
+//
+//        mMap.setBuildingsEnabled(true);
+//        mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
+//        mMap.getUiSettings().setRotateGesturesEnabled(false);
+//        mMap.getUiSettings().setZoomControlsEnabled(true);
+//        mMap.getUiSettings().setCompassEnabled(true);
+//        mMap.getUiSettings().setMapToolbarEnabled(false);
 
         mapReady = true;
 
@@ -216,6 +224,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     LOCATION_REQUEST);
         }
         else {
+
             ActivityCompat.requestPermissions(this,
                     new String[]{
                             android.Manifest.permission.ACCESS_FINE_LOCATION,
@@ -313,9 +322,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         keepOn = false;
 
 //        mMap.getUiSettings().setMapToolbarEnabled(false);
-
-        Log.d(TAG, "toolbar enabled: " + String.valueOf(mMap.getUiSettings().isMapToolbarEnabled()));
-
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 

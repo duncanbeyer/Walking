@@ -36,12 +36,11 @@
         -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDqocL3Wl3PpR2ljJ6hBm650RieiWzsacc" />
+            android:value="AIzaSyBJapDXaU30DMPej5XBnutojU2kdAZwJMs" />
 
         <activity
             android:name=".MapsActivity"
             android:exported="true"
-            android:theme="@style/Theme.App.Starting"
             android:label="@string/title_activity_maps" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
