@@ -14,7 +14,7 @@ import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
-class FenceMgr {
+class FenceManager {
 
     private static final String TAG = "FenceMgr";
     private final MapsActivity mapsActivity;
@@ -22,7 +22,7 @@ class FenceMgr {
     private PendingIntent geofencePendingIntent;
 
 
-    FenceMgr(final MapsActivity mapsActivity) {
+    FenceManager(final MapsActivity mapsActivity) {
         this.mapsActivity = mapsActivity;
         geofencingClient = LocationServices.getGeofencingClient(mapsActivity);
 
@@ -47,7 +47,7 @@ class FenceMgr {
                         fd.getLatLng().latitude,
                         fd.getLatLng().longitude,
                         fd.getRadius())
-                .setTransitionTypes(fd.getType())
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE) //Fence expires after N millis  -or- Geofence.NEVER_EXPIRE
                 .build();
 

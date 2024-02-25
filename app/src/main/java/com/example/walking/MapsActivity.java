@@ -5,9 +5,13 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.fragment.app.FragmentActivity;
-
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -17,9 +21,13 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -31,17 +39,18 @@ import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.example.walking.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
 import com.google.maps.android.SphericalUtil;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     // Needs:
@@ -58,28 +67,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private static final String TAG = "MapsActivity";
     private GoogleMap mMap;
-    private FenceMgr fenceMgr;
+    private FenceManager fenceMgr;
+    private Polyline polyline1;
+    private Polyline polyline2;
     private static final int LOCATION_REQUEST = 111;
     private static final int BACKGROUND_LOCATION_REQUEST = 222;
     private final List<PatternItem> pattern = Collections.singletonList(new Dot());
     private final ArrayList<LatLng> latLonHistory = new ArrayList<>();
+    private final ArrayList<LatLng> points = new ArrayList<>();
+    public static int screenHeight;
+    public static int screenWidth;
     private Polyline llHistoryPolyline;
     private Marker marker;
+    private LocationManager locationManager;
+    private ArrayList<FenceData> fences = new ArrayList<>();
+    private TextView locationText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_maps);
 
-        ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        Log.d(TAG,"onCreate: ");
+        getScreenDimensions();
+        new Thread(() -> FenceManager.getInstance(this)).start();
 
+        locationText = findViewById(R.id.address);
+        geocoder = new GeoCoder(this);
         initMap();
     }
 
 
     public void initMap() {
 
-        fenceMgr = new FenceMgr(this);
+        fenceMgr = new FenceManager(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
@@ -101,9 +122,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (checkPermission()) {
             setupLocationListener();
-            makeFences();
+            downloadData();
+            startGeoService();
         }
     }
+
+
 
     private boolean checkPermission() {
         ArrayList<String> perms = new ArrayList<>();
@@ -135,37 +159,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setupLocationListener() {
 
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         LocationListener locationListener = new MyLocationListener(this);
 
         //minTime	    long: minimum time interval between location updates, in milliseconds
         //minDistance	float: minimum distance between location updates, in meters
         if (checkPermission() && locationManager != null)
             locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 1000, 10, locationListener);
+                    LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
     }
 
-    private void makeFences() {
-        // Hard-coded test fences
-        LatLng ll = new LatLng(41.8754, -87.6242);
-        addFence(ll, 100.0);
-
-        LatLng ll2 = new LatLng(41.8794, -87.6242);
-        addFence(ll2, 80.0);
-    }
-
-    private void addFence(LatLng latLng, double radius) {
-        String id = UUID.randomUUID().toString();
-        FenceData fd = new FenceData(id, latLng, radius);
+    private void addFence(JSONObject j) {
+        FenceData fd = new FenceData(j);
         fenceMgr.addFence(fd);
+        fences.add(fd);
 
         // Just to see the fence
-        int line = ContextCompat.getColor(this, R.color.green);
+        int line = Integer.parseInt(fd.getFenceColor());
         int fill = ColorUtils.setAlphaComponent(line, 50);
 
         mMap.addCircle(new CircleOptions()
-                .center(latLng)
-                .radius(radius)
+                .center(fd.getLatLng())
+                .radius(fd.getRadius())
                 .strokePattern(pattern)
                 .strokeColor(line)
                 .fillColor(fill));
@@ -179,7 +194,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         PolylineOptions polylineOptions = new PolylineOptions();
 
-        for (latLng ll : pathPoints) {
+        for (LatLng ll : points) {
             polylineOptions.add(ll);
         }
         polyline2 = mMap.addPolyline(polylineOptions);
@@ -187,6 +202,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         polyline2.setWidth(15);
         polyline2.setColor(getColor(R.color.yellow));
 
+    }
+
+    private void initLocation() {
+        FusedLocationProviderClient fusedLocationClient =
+                LocationServices.getFusedLocationProviderClient(this);
+
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                LatLng latlng = new LatLng(location.getLatitude(), location.getLongitude());
+            }
+        });
 
     }
 
@@ -290,7 +321,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             if (permCount == permNum) {
                 setupLocationListener();
-                makeFences();
+                downloadData();
             }
 
         }
@@ -298,9 +329,104 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (ContextCompat.checkSelfPermission(this,
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 setupLocationListener();
-                makeFences();
+                downloadData();
             }
         }
+    }
+
+    public void downloadData() {
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        String ex = "http://www.christopherhield.com/data/WalkingTourContent.json";
+
+        JsonObjectRequest jsonObjectRequest =
+                new JsonObjectRequest(Request.Method.GET, ex,
+                        null,
+                        response -> {
+                            jsonToArr(response);
+                        },
+                        error -> {
+                            Log.e(TAG, "Exception getting JSON data: " + error.getMessage());
+                        }) {
+                };
+
+        queue.add(jsonObjectRequest);
+
+    }
+
+    private void jsonToArr(JSONObject j) {
+
+        try {
+
+            JSONArray fencesArr;
+            JSONArray pathArr;
+
+            fencesArr = j.getJSONArray("fences");
+            pathArr = j.getJSONArray("path");
+
+
+            Log.d(TAG,"fencesArr size: " + fencesArr.length());
+            Log.d(TAG,"pathArr size: " + pathArr.length());
+
+            for (int i = 0;i < fencesArr.length();i++) {
+                addFence(fencesArr.getJSONObject(i));
+            }
+            String s;
+            String[] parts;
+            LatLng l;
+            for (int i = 0;i < pathArr.length();i++) {
+                addFence(fencesArr.getJSONObject(i));
+                s = fencesArr.getString(i);
+                parts = s.split(", ");
+                l = new LatLng(Double.parseDouble(parts[1]), Double.parseDouble(parts[0]));
+                points.add(l);
+            }
+
+        } catch (Exception e) {
+            Log.d(TAG, "Exception loading JSON: " + e);
+        }
+
+    }
+
+    private void showTravelPath() {
+        if (polyline1 != null) {
+            polyline1.remove();
+        }
+
+        if (coords.size() > 1) {
+            if (showTravelPath) {
+                PolylineOptions polylineOptions = new PolylineOptions();
+
+                for (LatLng ll : coords) {
+                    polylineOptions.add(ll);
+                }
+                polyline1 = mMap.addPolyline(polylineOptions);
+                polyline1.setEndCap(new RoundCap());
+                polyline1.setWidth(15);
+                polyline1.setColor(getColor(R.color.yellow));
+            }
+        }
+    }
+
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        if (locationManager != null && locationListener != null)
+//            locationManager.removeUpdates(locationListener);
+//    }
+//
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        if (checkPermission() && (locationManager != null) && (locationListener != null))
+//            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 10, locationListener);
+//    }
+    @Override
+    protected void onDestroy() {
+
+
+        super.onDestroy();
     }
 
 
@@ -321,5 +447,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             Toast.makeText(this, "ALREADY HAS BACKGROUND LOC PERMS", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void startGeoService() {
+
+        //starting service
+        Intent intent = new Intent(this, GeofenceService.class);
+        intent.putExtra("FENCES", fences);
+
+        Log.d(TAG, "startService: START");
+        ContextCompat.startForegroundService(this, intent);
+        Log.d(TAG, "startService: END");
+    }
+
+    private void getScreenDimensions() {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        screenHeight = displayMetrics.heightPixels;
+        screenWidth = displayMetrics.widthPixels;
     }
 }

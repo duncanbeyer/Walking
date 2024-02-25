@@ -42,6 +42,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.1.0")
     implementation("com.google.maps.android:android-maps-utils:0.5")
 
+    implementation ("com.android.volley:volley:1.2.1")
+
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     testImplementation("junit:junit:4.13.2")

@@ -43,8 +43,7 @@ public class GeoReceiver extends BroadcastReceiver {
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
 
         // Test that the reported transition was of interest.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
-                geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
 
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
             if (triggeringGeofences != null) {
@@ -83,8 +82,12 @@ public class GeoReceiver extends BroadcastReceiver {
         String transitionString = transitionType == Geofence.GEOFENCE_TRANSITION_ENTER
                 ? "Welcome!" : "Goodbye!";
 
+        FenceData fenceData = GeofenceService.fences.get(id);
+
         Intent resultIntent = new Intent(context.getApplicationContext(), FenceInfoActivity.class);
         resultIntent.putExtra("FENCE_ID", id);
+        resultIntent.putExtra("BUILDING", fenceData);
+
         resultIntent.putExtra("FENCE_TRANS", transitionString);
 
         PendingIntent pi = PendingIntent.getActivity(
@@ -94,9 +97,10 @@ public class GeoReceiver extends BroadcastReceiver {
 
         Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pi)
-                .setSmallIcon(R.drawable.walker_right)
-                .setContentTitle(id + " (" + transitionString + ")") // Bold title
-                .setContentText("Click for Details...") // Detail info
+                .setSmallIcon(R.drawable.fence_notif)
+                .setContentTitle(fenceData.getId() + "\\(Tap to see details\\)") // Bold title
+                .setSubText(fenceData.getId()) // Detail info
+                .setContentText(fenceData.getAddress()) // Detail info
                 .setAutoCancel(true)
                 .build();
 
