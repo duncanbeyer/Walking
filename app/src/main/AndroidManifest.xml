@@ -48,6 +48,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".FenceInfoActivity"
+            android:exported="true"
+            android:label="fence info activity">
+        </activity>
     </application>
 
 </manifest>

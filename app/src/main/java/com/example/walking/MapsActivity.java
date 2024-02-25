@@ -1,27 +1,24 @@
 package com.example.walking;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import androidx.core.splashscreen.SplashScreen;
-
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -29,326 +26,154 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.walking.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
+import com.google.maps.android.SphericalUtil;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+    // Needs:
+    //      implementation 'com.google.android.gms:play-services-maps:17.0.0'
+    //      implementation 'com.google.android.gms:play-services-location:17.0.0'
+
+    //      ACCESS_FINE_LOCATION
+    //      ACCESS_BACKGROUND_LOCATION (with Allow in Settings => Allow all the time
+
+    // To test, set location to: 700 S Wabash
+    // Then run app
+    // Make route from 700 S Wabash
+    // to 189 N Michigan Ave
 
     private static final String TAG = "MapsActivity";
-    private boolean keepOn = true;
     private GoogleMap mMap;
-    private ActivityMapsBinding binding;
-
-    private ArrayList<String> routeNames = new ArrayList<>();
+    private FenceMgr fenceMgr;
     private static final int LOCATION_REQUEST = 111;
-    private static final int NOTIFICATION_REQUEST = 222;
-    private static final int BACKGROUND_REQUEST = 333;
-    private LocationManager locationManager;
-    private LocationListener locationListener;
-    private Polyline llHistoryPolyline;
+    private static final int BACKGROUND_LOCATION_REQUEST = 222;
+    private final List<PatternItem> pattern = Collections.singletonList(new Dot());
     private final ArrayList<LatLng> latLonHistory = new ArrayList<>();
-    private Marker walker;
-    private boolean notificationPermissionGranted = false;
-    private boolean locationPermissionGranted = false;
-    private boolean backgroundPermissionGranted = false;
-    private boolean mapReady = false;
-    public static int screenHeight;
-    public static int screenWidth;
-    private final float zoomDefault = 15.0f;
-    private boolean requesting = true;
+    private Polyline llHistoryPolyline;
+    private Marker carMarker;
+
+    private static final float zoomLevel = 15f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            backgroundPermissionGranted = true;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionGranted = true;
-        }
-
-//        initSplash();
+        initMap();
+    }
 
 
+    public void initMap() {
+
+        fenceMgr = new FenceMgr(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-    }
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        Log.d(TAG,"in onMapReady");
-
-        mMap = googleMap;
-
-
-        LatLng markerLocation = new LatLng(41.8661, -87.617020);
-        mMap.addMarker(new MarkerOptions().position(markerLocation).title("Field Museum Marker"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerLocation, 17.0f));
-
-
-//
-//        mMap.setBuildingsEnabled(true);
-//        mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
-//        mMap.getUiSettings().setRotateGesturesEnabled(false);
-//        mMap.getUiSettings().setZoomControlsEnabled(true);
-//        mMap.getUiSettings().setCompassEnabled(true);
-//        mMap.getUiSettings().setMapToolbarEnabled(false);
-
-        mapReady = true;
-
-            if (checkPermission()) {
-            setupLocationListener();
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
         }
     }
 
-    private void initSplash() {
-        SplashScreen.installSplashScreen(this)
-                .setKeepOnScreenCondition(
-                        new SplashScreen.KeepOnScreenCondition() {
-                            @Override
-                            public boolean shouldKeepOnScreen() {
-                                return keepOn;
-                            }
-                        }
-                );
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel));
+
+        mMap.setBuildingsEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setMapToolbarEnabled(true);
+        mMap.getUiSettings().setCompassEnabled(true);
+        mMap.getUiSettings().setMyLocationButtonEnabled(true);
+        mMap.getUiSettings().setIndoorLevelPickerEnabled(true);
+
+        if (checkPermission()) {
+            setupLocationListener();
+            makeFences();
+        }
     }
-
-
 
     private boolean checkPermission() {
-        Log.d(TAG,"in checkPermission");
+        ArrayList<String> perms = new ArrayList<>();
 
-        if (!notificationPermissionGranted) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                Log.d(TAG, "tiramisu true");
-                if (ContextCompat.checkSelfPermission(this,
-                        android.Manifest.permission.POST_NOTIFICATIONS) !=
-                        PackageManager.PERMISSION_GRANTED) {
-                    Log.d(TAG, "no notifi perm");
-                    checkPermissionsInit();
-                    return false;
-                } else notificationPermissionGranted = true;
-            } else notificationPermissionGranted = true;
-        }
-        if (!locationPermissionGranted | backgroundPermissionGranted) {
-            if ((ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION) !=
-                    PackageManager.PERMISSION_GRANTED)
-                    | (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
-                    PackageManager.PERMISSION_GRANTED)
-            ) {
-                Log.d(TAG, "second false");
-                checkPermissionsInit();
-                return false;
-            } else {
-                locationPermissionGranted = true;
-                backgroundPermissionGranted = true;
-            }
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            perms.add(android.Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
-        Log.d(TAG,"it has permissions in checkPermission()");
-        return true;
-    }
-
-
-
-    private void checkPermissionsInit() {
-        if (!locationPermissionGranted) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestAppLocationPermissions();
-                Log.d(TAG,"just requested location, about to return.");
-                return;
+                    android.Manifest.permission.POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                perms.add(android.Manifest.permission.POST_NOTIFICATIONS);
             }
         }
-        if (!backgroundPermissionGranted) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestAppBackgroundPermissions();
-                Log.d(TAG, "just requested background, about to return.");
-                return;
-            }
-        }
-        if (!notificationPermissionGranted) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestAppNotificationPermissions();
-                    Log.d(TAG, "just requested notif, about to return.");
-                    return;
-                }
-            }
-        }
-        try {
-//            Thread.sleep(2000);
-            Log.d(TAG,"sleep here");
-        } catch (Exception e) {
-            Log.d(TAG,"error sleeping", e);
-        }
 
-        setupLocationListener();
-
-    }
-
-    private void requestAppLocationPermissions() {
-
-        Log.d(TAG,"About to request location permission 1");
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
-        {
+        if (!perms.isEmpty()) {
+            String[] array = perms.toArray(new String[0]);
             ActivityCompat.requestPermissions(this,
-                    new String[]{
-                            android.Manifest.permission.ACCESS_FINE_LOCATION},
-                    LOCATION_REQUEST);
-        }
-        else {
-
-            ActivityCompat.requestPermissions(this,
-                    new String[]{
-                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                            android.Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                    LOCATION_REQUEST);
+                    array, LOCATION_REQUEST);
+            return false;
         }
 
-
-        Log.d(TAG,"About to request location permission 2");
-
-    }
-
-    private void requestAppBackgroundPermissions() {
-
-        Log.d(TAG,"About to request background permission 1");
-
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
-            return;
-
-        Log.d(TAG,"build version is " + Build.VERSION.SDK_INT);
-        Log.d(TAG,"1 is " + Build.VERSION_CODES.Q);
-
-        ActivityCompat.requestPermissions(this,
-                new String[]{
-                        Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                BACKGROUND_REQUEST);
-
-        Log.d(TAG,"About to request background permission 2");
-
-    }
-
-    private void requestAppNotificationPermissions() {
-
-        Log.d(TAG,"About to request notification permission 1");
-
-        ActivityCompat.requestPermissions(this,
-                new String[]{
-                        Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_REQUEST);
-
-        Log.d(TAG,"About to request notification permission 2");
-
-    }
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (permissions.length == 0) {
-            Log.d(TAG,"permissions length 0");
-            return;
-        }
-
-        if (requestCode == LOCATION_REQUEST) {
-            if (permissions[0].equals(android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.d(TAG, "location permission granted");
-                    locationPermissionGranted = true;
-                    checkPermissionsInit();
-                } else {
-                    Log.d(TAG, "location permission denied");
-                    permissionDenied();
-                }
-            }
-        }
-        else if (requestCode == BACKGROUND_REQUEST) {
-            if (permissions[0].equals(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    backgroundPermissionGranted = true;
-                    Log.d(TAG, "background permission granted");
-                    checkPermissionsInit();
-                } else {
-                    Log.d(TAG, "background permission denied");
-                    permissionDenied();
-                }
-            }
-        }
-        else if (requestCode == NOTIFICATION_REQUEST) {
-            if (permissions[0].equals(Manifest.permission.POST_NOTIFICATIONS)) {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    notificationPermissionGranted = true;
-                    Log.d(TAG, "notification permission granted");
-                    checkPermissionsInit();
-                } else {
-                    Log.d(TAG, "notification permission denied");
-                    permissionDenied();
-                }
-            }
-            Log.d(TAG,"Just got notification request result.");
-        }
+        return ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void setupLocationListener() {
-        keepOn = false;
 
-//        mMap.getUiSettings().setMapToolbarEnabled(false);
-
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-        locationListener = new MyLocationListener(this);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        LocationListener locationListener = new MyLocationListener(this);
 
         //minTime	    long: minimum time interval between location updates, in milliseconds
         //minDistance	float: minimum distance between location updates, in meters
         if (checkPermission() && locationManager != null)
-        {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 15, locationListener);
-        }
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, 1000, 10, locationListener);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (locationManager != null && locationListener != null)
-            locationManager.removeUpdates(locationListener);
+    private void makeFences() {
+        // Hard-coded test fences
+        LatLng ll = new LatLng(41.8754, -87.6242);
+        addFence(ll, 100.0);
+
+        LatLng ll2 = new LatLng(41.8794, -87.6242);
+        addFence(ll2, 80.0);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG,"onResume");
-        if (locationPermissionGranted && notificationPermissionGranted && backgroundPermissionGranted && mapReady && checkPermission() && (locationManager != null) && (locationListener != null))
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 10, locationListener);
+    private void addFence(LatLng latLng, double radius) {
+        String id = UUID.randomUUID().toString();
+        FenceData fd = new FenceData(id, latLng, radius);
+        fenceMgr.addFence(fd);
+
+        // Just to see the fence
+        int line = ContextCompat.getColor(this, R.color.green);
+        int fill = ColorUtils.setAlphaComponent(line, 50);
+
+        mMap.addCircle(new CircleOptions()
+                .center(latLng)
+                .radius(radius)
+                .strokePattern(pattern)
+                .strokeColor(line)
+                .fillColor(fill));
     }
+
 
     public void updateLocation(Location location) {
 
@@ -361,7 +186,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (latLonHistory.size() == 1) { // First update
             mMap.addMarker(new MarkerOptions().alpha(0.5f).position(latLng).title("My Origin"));
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomDefault));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             return;
         }
 
@@ -373,65 +198,112 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
             llHistoryPolyline = mMap.addPolyline(polylineOptions);
             llHistoryPolyline.setEndCap(new RoundCap());
-            llHistoryPolyline.setWidth(12);
-            llHistoryPolyline.setColor(getColor(R.color.dark_green));
+            llHistoryPolyline.setWidth(8);
+            llHistoryPolyline.setColor(Color.BLUE);
 
             float r = getRadius();
             if (r > 0) {
                 Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.walker_left);
                 Bitmap resized = Bitmap.createScaledBitmap(icon, (int) r, (int) r, false);
+
                 BitmapDescriptor iconBitmap = BitmapDescriptorFactory.fromBitmap(resized);
 
                 MarkerOptions options = new MarkerOptions();
                 options.position(latLng);
                 options.icon(iconBitmap);
                 options.rotation(location.getBearing());
+                options.anchor(0.5f,0.5f);
 
-                if (walker != null) {
-                    walker.remove();
+                if (carMarker != null) {
+                    carMarker.remove();
                 }
 
-                walker = mMap.addMarker(options);
+                carMarker = mMap.addMarker(options);
             }
         }
+        Log.d(TAG, "updateLocation: " + mMap.getCameraPosition().zoom);
+
         mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+        sumIt();
     }
 
+    private void sumIt() {
+        double sum = 0;
+        LatLng last = latLonHistory.get(0);
+        for (int i = 1; i < latLonHistory.size(); i++) {
+            LatLng current = latLonHistory.get(i);
+            sum += SphericalUtil.computeDistanceBetween(current, last);
+            last = current;
+        }
+        Log.d(TAG, "sumIt: " + String.format("%.3f km", sum/1000.0));
+
+    }
     private float getRadius() {
         float z = mMap.getCameraPosition().zoom;
-        float factor = (float) ((35.0 / 2.0 * z) - (355.0 / 2.0));
-        float multiplier = ((7.0f / 7200.0f) * screenWidth) - (1.0f / 20.0f);
-        return (factor * multiplier);
+        return 15f * z - 145f;
     }
 
-    void permissionDenied() {
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
 
-        Log.d(TAG,"in permission denied");
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-//        binding.blackLayout.setVisibility(View.VISIBLE);
+        int permNum = permissions.length + 1;
+        int permCount = 0;
 
-        keepOn = false;
+        if (requestCode == LOCATION_REQUEST) {
 
-        LayoutInflater inflater = getLayoutInflater();
-        View dialog = inflater.inflate(R.layout.alert_layout, null);
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED)
+                permCount++;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(dialog)
-                .setPositiveButton("ok", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        finish();
-                    }
-                });
+            if (permissions[0].equals(Manifest.permission.ACCESS_FINE_LOCATION) &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getBackgroundLocPerm();
+                permCount++;
+            }
 
-        builder.show();
+            if (permissions.length == 2) {
+                if (permissions[1].equals(Manifest.permission.POST_NOTIFICATIONS) &&
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                    permCount++;
+                }
+            }
+
+            if (permCount == permNum) {
+                setupLocationListener();
+                makeFences();
+            }
+
+        }
+        else if (requestCode == BACKGROUND_LOCATION_REQUEST) {
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                setupLocationListener();
+                makeFences();
+            }
+        }
     }
 
-    private double getAngle(Location newLocation, Location prevLocation) {
-        double lonDiff = newLocation.getLongitude() - prevLocation.getLongitude();
-        double latDiff = newLocation.getLatitude() - prevLocation.getLatitude();
-        double angle = Math.atan2(lonDiff,latDiff);
-        return Math.toDegrees(angle) + 90;
-    }
 
+    private void getBackgroundLocPerm() {
+
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "NEED BASIC PERMS FIRST!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                    BACKGROUND_LOCATION_REQUEST);
+            Log.d(TAG,"just requested background");
+        } else {
+            Toast.makeText(this, "ALREADY HAS BACKGROUND LOC PERMS", Toast.LENGTH_LONG).show();
+        }
+    }
 }
