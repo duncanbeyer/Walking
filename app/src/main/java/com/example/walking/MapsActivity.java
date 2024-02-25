@@ -64,9 +64,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private final List<PatternItem> pattern = Collections.singletonList(new Dot());
     private final ArrayList<LatLng> latLonHistory = new ArrayList<>();
     private Polyline llHistoryPolyline;
-    private Marker carMarker;
-
-    private static final float zoomLevel = 15f;
+    private Marker marker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,14 +91,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel));
 
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
+        mMap.getUiSettings().setRotateGesturesEnabled(false);
         mMap.setBuildingsEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMapToolbarEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
-        mMap.getUiSettings().setMyLocationButtonEnabled(true);
-        mMap.getUiSettings().setIndoorLevelPickerEnabled(true);
 
         if (checkPermission()) {
             setupLocationListener();
@@ -174,6 +171,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .fillColor(fill));
     }
 
+    private void drawTourPath() {
+        findViewById(R.id.progressBar2).setVisibility(View.INVISIBLE);
+
+        if (polyline2 != null) {
+            return;
+        }
+        PolylineOptions polylineOptions = new PolylineOptions();
+
+        for (latLng ll : pathPoints) {
+            polylineOptions.add(ll);
+        }
+        polyline2 = mMap.addPolyline(polylineOptions);
+        polyline2.setEndCap(new RoundCap());
+        polyline2.setWidth(15);
+        polyline2.setColor(getColor(R.color.yellow));
+
+
+    }
+
 
     public void updateLocation(Location location) {
 
@@ -214,11 +230,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 options.rotation(location.getBearing());
                 options.anchor(0.5f,0.5f);
 
-                if (carMarker != null) {
-                    carMarker.remove();
+                if (marker != null) {
+                    marker.remove();
                 }
 
-                carMarker = mMap.addMarker(options);
+                marker = mMap.addMarker(options);
             }
         }
         Log.d(TAG, "updateLocation: " + mMap.getCameraPosition().zoom);
