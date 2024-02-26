@@ -1,5 +1,6 @@
 package com.example.walking;
 
+import android.graphics.Color;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
@@ -19,7 +20,7 @@ public class FenceData implements Parcelable {
     private String id;
     private String address;
     private String description;
-    private String fenceColor;
+    private int fenceColor;
     private String image;
     private LatLng latLng;
     private double radius;
@@ -42,13 +43,36 @@ public class FenceData implements Parcelable {
             description = j.getString("description");
         } catch (Exception e) {}
         try {
-            fenceColor = j.getString("fenceColor");
+            fenceColor = hexToColor(j.getString("fenceColor"));
         } catch (Exception e) {}
         try {
             image = j.getString("image");
         } catch (Exception e) {}
 
     }
+
+    protected FenceData(Parcel in) {
+        id = in.readString();
+        address = in.readString();
+        description = in.readString();
+        fenceColor = Integer.parseInt(in.readString());
+        image = in.readString();
+        latLng = in.readParcelable(LatLng.class.getClassLoader());
+        radius = in.readDouble();
+    }
+
+    public static final Creator<FenceData> CREATOR = new Creator<FenceData>() {
+        @Override
+        public FenceData createFromParcel(Parcel in) {
+            return new FenceData(in);
+        }
+
+        @Override
+        public FenceData[] newArray(int size) {
+            return new FenceData[size];
+        }
+    };
+
     public String getAddress() {
         return address;
     }
@@ -57,7 +81,7 @@ public class FenceData implements Parcelable {
         return description;
     }
 
-    public String getFenceColor() {
+    public int getFenceColor() {
         return fenceColor;
     }
 
@@ -87,6 +111,18 @@ public class FenceData implements Parcelable {
                 '}';
     }
 
+    public static int hexToColor(String hex) {
+        if (hex != null && hex.length() == 7 && hex.startsWith("#")) {
+            try {
+                int rgb = Integer.parseInt(hex.substring(1), 16);
+                return rgb;
+            } catch (Exception e) {
+                Log.d(TAG,"Error converting color: ", e);
+            }
+        }
+        return Color.BLACK;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -97,7 +133,7 @@ public class FenceData implements Parcelable {
         parcel.writeString(id);
         parcel.writeString(address);
         parcel.writeString(description);
-        parcel.writeString(fenceColor);
+        parcel.writeString(String.valueOf(fenceColor));
         parcel.writeString(image);
         parcel.writeParcelable(latLng, i);
         parcel.writeDouble(radius);

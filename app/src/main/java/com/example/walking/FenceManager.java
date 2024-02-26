@@ -16,7 +16,7 @@ import com.google.android.gms.location.LocationServices;
 
 class FenceManager {
 
-    private static final String TAG = "FenceMgr";
+    private static final String TAG = "FenceManager";
     private final MapsActivity mapsActivity;
     private final GeofencingClient geofencingClient;
     private PendingIntent geofencePendingIntent;

@@ -33,7 +33,7 @@ public class GeofenceService extends Service {
     private final String channelId = "FENCE_CHANNEL";
     private PendingIntent geofencePendingIntent;
     private GeofencingClient geofencingClient;
-    public static HashMap<String, FenceData> fences;
+    public static HashMap<String, FenceData> fences = new HashMap<String, FenceData>();
 
     @Override
     public void onCreate() {
@@ -46,8 +46,7 @@ public class GeofenceService extends Service {
                         aVoid -> Log.d(TAG, "onSuccess: removeGeofences"))
                 .addOnFailureListener(this.getMainExecutor(),
                         e -> {
-                            e.printStackTrace();
-                            Log.d(TAG, "onFailure: removeGeofences");
+                            Log.d(TAG, "onFailure: removeGeofences: ", e);
                             Toast.makeText(this, "Trouble removing existing fences: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         });
 
@@ -79,12 +78,13 @@ public class GeofenceService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand: " + intent);
+        Log.d(TAG, "onStartCommand called in GeofenceService.");
         // This Toast is just to let you know that the service has started.
         Toast.makeText(this, "SERVICE STARTED", Toast.LENGTH_LONG).show();
 
         fences = (HashMap<String, FenceData>) intent.getSerializableExtra("FENCES");
-
+        Log.d(TAG,"just init fences in GeofenceService");
+        Log.d(TAG,"Fences is: " + fences.toString());
         if (fences != null)
             makeFences(fences.values());
 
@@ -114,7 +114,7 @@ public class GeofenceService extends Service {
                         fd.getLatLng().latitude,
                         fd.getLatLng().longitude,
                         fd.getRadius())
-                .setTransitionTypes(fd.getType())
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE) //Fence expires after N millis  -or- Geofence.NEVER_EXPIRE
                 .build();
 
@@ -132,11 +132,12 @@ public class GeofenceService extends Service {
                 .addOnFailureListener(e -> {
                     e.printStackTrace();
                     Log.d(TAG, "onFailure: addGeofences: " + e.getMessage());
-                    Toast.makeText(this, "Trouble adding new fence: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
     private PendingIntent getGeofencePendingIntent() {
+
+        Log.d(TAG,"in getGeofencePendingIntent()");
 
         // Reuse the PendingIntent if we already have it.
         if (geofencePendingIntent != null) {

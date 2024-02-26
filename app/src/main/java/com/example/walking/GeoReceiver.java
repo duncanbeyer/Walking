@@ -21,13 +21,15 @@ import java.util.List;
 
 public class GeoReceiver extends BroadcastReceiver {
 
-    private static final String TAG = "GeofenceBroadcastRcvr";
+    private static final String TAG = "GeoReceiver";
     private static final String CHANNEL_ID = "FENCE_CHANNEL";
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.d(TAG,"just received geofencing event.");
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
+
 
         if (geofencingEvent == null) {
             Log.d(TAG, "onReceive: NULL GeofencingEvent received");
@@ -48,7 +50,8 @@ public class GeoReceiver extends BroadcastReceiver {
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
             if (triggeringGeofences != null) {
                 for (Geofence g : triggeringGeofences) {
-                    sendNotification(context, g.getRequestId(), geofenceTransition);
+                    FenceData fd = MapsActivity.getFenceData(g.getRequestId());
+                    sendNotification(context, fd.getId(), geofenceTransition);
                 }
             }
         }
@@ -56,33 +59,38 @@ public class GeoReceiver extends BroadcastReceiver {
 
     public void sendNotification(Context context, String id, int transitionType) {
 
+        Log.d(TAG,"in sendNotification");
+
         NotificationManager notificationManager = (NotificationManager) context
                 .getSystemService(Context.NOTIFICATION_SERVICE);
 
         if (notificationManager == null) return;
 
-        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-
-            Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_sound);
-            AudioAttributes att = new AudioAttributes.Builder().
-                    setUsage(AudioAttributes.USAGE_NOTIFICATION).build();
-
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_ID, importance);
-            mChannel.setSound(soundUri, att);
-            mChannel.setLightColor(Color.RED);
-            mChannel.setVibrationPattern(new long[]{0, 1000, 500, 1000});
-            mChannel.setShowBadge(true);
-
-            notificationManager.createNotificationChannel(mChannel);
-
-        }
+//        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+//
+//            Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_sound);
+//            AudioAttributes att = new AudioAttributes.Builder().
+//                    setUsage(AudioAttributes.USAGE_NOTIFICATION).build();
+//
+//            int importance = NotificationManager.IMPORTANCE_HIGH;
+//            NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_ID, importance);
+//            mChannel.setSound(soundUri, att);
+//            mChannel.setLightColor(Color.RED);
+//            mChannel.setVibrationPattern(new long[]{0, 1000, 500, 1000});
+//            mChannel.setShowBadge(true);
+//
+//            notificationManager.createNotificationChannel(mChannel);
+//
+//        }
 
         ////
         String transitionString = transitionType == Geofence.GEOFENCE_TRANSITION_ENTER
                 ? "Welcome!" : "Goodbye!";
 
         FenceData fenceData = GeofenceService.fences.get(id);
+        Log.d(TAG,"About to be here we are");
+        Log.d(TAG,"Here we are " + fenceData.toString());
+
 
         Intent resultIntent = new Intent(context.getApplicationContext(), FenceInfoActivity.class);
         resultIntent.putExtra("FENCE_ID", id);
@@ -98,7 +106,7 @@ public class GeoReceiver extends BroadcastReceiver {
         Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pi)
                 .setSmallIcon(R.drawable.fence_notif)
-                .setContentTitle(fenceData.getId() + "\\(Tap to see details\\)") // Bold title
+                .setContentTitle(fenceData.getId() + "(Tap to see details)") // Bold title
                 .setSubText(fenceData.getId()) // Detail info
                 .setContentText(fenceData.getAddress()) // Detail info
                 .setAutoCancel(true)
