@@ -54,6 +54,8 @@ public class GeofenceService extends Service {
 
         notification = new NotificationCompat.Builder(this, channelId)
                 .build();
+        GeoReceiver.clearAllNotificationsInit(this);
+
     }
 
     private void createNotificationChannel() {

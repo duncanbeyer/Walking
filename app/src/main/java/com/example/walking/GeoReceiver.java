@@ -110,4 +110,14 @@ public class GeoReceiver extends BroadcastReceiver {
         }
     }
 
+    public static void clearAllNotificationsInit(Context context) {
+        
+        NotificationManager notificationManager = (NotificationManager) context
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager != null) {
+            notificationManager.cancelAll();
+        }
+    }
+
 }
