@@ -50,10 +50,8 @@ public class GeofenceService extends Service {
                             Log.d(TAG, "onFailure: removeGeofences: ", e);
                         });
 
-        // Since we need to post a notification, we first create a channel
         createNotificationChannel();
 
-        // Create a notification required when running a foreground service.
         notification = new NotificationCompat.Builder(this, channelId)
                 .build();
     }
@@ -78,12 +76,10 @@ public class GeofenceService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand called in GeofenceService.");
 
         if (intent != null) {
             String action = intent.getAction();
             if (GeofenceService.STOP.equals(action)) {
-                Log.d(TAG,"stopping GeofenceService.");
                 NotificationManager notificationManager = (NotificationManager) this
                         .getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -96,21 +92,16 @@ public class GeofenceService extends Service {
 
 
         fences = (HashMap<String, FenceData>) intent.getSerializableExtra("FENCES");
-        Log.d(TAG,"just init fences in GeofenceService");
-        Log.d(TAG,"Fences is: " + fences.toString());
         if (fences != null)
             makeFences(fences.values());
 
-        // Start the service in the foreground
         startForeground(1, notification);
 
-        // If the service is killed, restart it
         return Service.START_STICKY;
     }
 
     private void makeFences(Collection<FenceData> fences) {
         for (FenceData fd : fences) {
-            Log.d(TAG, "makeFences: " + fd);
             addFence(fd);
         }
     }
@@ -128,7 +119,7 @@ public class GeofenceService extends Service {
                         fd.getLatLng().longitude,
                         fd.getRadius())
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE) //Fence expires after N millis  -or- Geofence.NEVER_EXPIRE
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .build();
 
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
@@ -141,24 +132,17 @@ public class GeofenceService extends Service {
         geofencingClient
                 .addGeofences(geofencingRequest, geofencePendingIntent)
                 .addOnFailureListener(e -> {
-                    e.printStackTrace();
                     Log.d(TAG, "onFailure: addGeofences: " + e.getMessage());
                 });
     }
 
     private PendingIntent getGeofencePendingIntent() {
 
-        Log.d(TAG,"in getGeofencePendingIntent()");
-
-        // Reuse the PendingIntent if we already have it.
         if (geofencePendingIntent != null) {
             return geofencePendingIntent;
         }
 
         Intent intent = new Intent(this, GeoReceiver.class);
-
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
 
         geofencePendingIntent = PendingIntent.getBroadcast(
                 this, 0, intent,
@@ -174,7 +158,6 @@ public class GeofenceService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy in GeofenceService");
 
         super.onDestroy();
     }

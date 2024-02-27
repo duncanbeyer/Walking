@@ -5,7 +5,6 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
@@ -29,9 +28,7 @@ class FenceManager {
         geofencingClient.removeGeofences(getGeofencePendingIntent())
                 .addOnSuccessListener(mapsActivity, aVoid -> Log.d(TAG, "onSuccess: removeGeofences"))
                 .addOnFailureListener(mapsActivity, e -> {
-                    e.printStackTrace();
                     Log.d(TAG, "onFailure: removeGeofences");
-                    Toast.makeText(mapsActivity, "Trouble removing existing fences: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -48,7 +45,7 @@ class FenceManager {
                         fd.getLatLng().longitude,
                         fd.getRadius())
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE) //Fence expires after N millis  -or- Geofence.NEVER_EXPIRE
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .build();
 
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
@@ -61,28 +58,21 @@ class FenceManager {
                 .addGeofences(geofencingRequest, geofencePendingIntent)
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "onSuccess: addGeofences"))
                 .addOnFailureListener(e -> {
-                    e.printStackTrace();
                     Log.d(TAG, "onFailure: addGeofences: " + e.getMessage());
-                    Toast.makeText(mapsActivity, "Trouble adding new fence: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
     private PendingIntent getGeofencePendingIntent() {
 
-        // Reuse the PendingIntent if we already have it.
         if (geofencePendingIntent != null) {
             return geofencePendingIntent;
         }
 
         Intent intent = new Intent(mapsActivity, GeoReceiver.class);
 
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-
         geofencePendingIntent = PendingIntent.getBroadcast(
                 mapsActivity, 0, intent,
                 PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-
 
         return geofencePendingIntent;
     }

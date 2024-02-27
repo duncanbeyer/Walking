@@ -27,7 +27,6 @@ public class GeoReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG,"just received geofencing event.");
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
 
@@ -44,10 +43,8 @@ public class GeoReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Get the transition type.
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
 
-        // Test that the reported transition was of interest.
         if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
 
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
@@ -62,37 +59,15 @@ public class GeoReceiver extends BroadcastReceiver {
 
     public void sendNotification(Context context, String id, int transitionType) {
 
-        Log.d(TAG,"in sendNotification");
-
         NotificationManager notificationManager = (NotificationManager) context
                 .getSystemService(Context.NOTIFICATION_SERVICE);
 
         if (notificationManager == null) return;
 
-//        if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-//
-//            Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_sound);
-//            AudioAttributes att = new AudioAttributes.Builder().
-//                    setUsage(AudioAttributes.USAGE_NOTIFICATION).build();
-//
-//            int importance = NotificationManager.IMPORTANCE_HIGH;
-//            NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_ID, importance);
-//            mChannel.setSound(soundUri, att);
-//            mChannel.setLightColor(Color.RED);
-//            mChannel.setVibrationPattern(new long[]{0, 1000, 500, 1000});
-//            mChannel.setShowBadge(true);
-//
-//            notificationManager.createNotificationChannel(mChannel);
-//
-//        }
-
-        ////
         String transitionString = transitionType == Geofence.GEOFENCE_TRANSITION_ENTER
                 ? "Welcome!" : "Goodbye!";
 
         FenceData fenceData = GeofenceService.fences.get(id);
-        Log.d(TAG,"About to be here we are");
-        Log.d(TAG,"Here we are " + fenceData.toString());
 
 
         Intent resultIntent = new Intent(context.getApplicationContext(), FenceInfoActivity.class);
@@ -109,9 +84,9 @@ public class GeoReceiver extends BroadcastReceiver {
         Notification notification = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentIntent(pi)
                 .setSmallIcon(R.drawable.fence_notif)
-                .setContentTitle(fenceData.getId() + "(Tap to see details)") // Bold title
-                .setSubText(fenceData.getId()) // Detail info
-                .setContentText(fenceData.getAddress()) // Detail info
+                .setContentTitle(fenceData.getId() + " (Tap to see details)")
+                .setSubText(fenceData.getId())
+                .setContentText(fenceData.getAddress())
                 .setAutoCancel(true)
                 .build();
 
@@ -124,8 +99,6 @@ public class GeoReceiver extends BroadcastReceiver {
 
 
     public static void clearAllNotifications(Context context) {
-
-        Log.d(TAG,"clearAllNotifications called");
 
         closed = true;
 

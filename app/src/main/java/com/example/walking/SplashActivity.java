@@ -38,12 +38,10 @@ public class SplashActivity extends AppCompatActivity {
                         }
                 );
         if (checkPermission()) {
-            //sleep 2 seconds
             try {
-                Log.d(TAG,"about to sleep");
-                Thread.sleep(2000); // Sleep for 2 seconds
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
-                Log.d(TAG,"sleep failed ", e);
+                Log.d(TAG,"Sleep failed: ", e);
             }
             goOn();
         }
@@ -140,7 +138,6 @@ public class SplashActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
                     BACKGROUND_LOCATION_REQUEST);
-            Log.d(TAG, "just requested background");
         }
     }
 

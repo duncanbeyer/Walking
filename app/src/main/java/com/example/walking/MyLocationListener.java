@@ -2,7 +2,6 @@ package com.example.walking;
 
 import android.location.Location;
 import android.location.LocationListener;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -21,7 +20,6 @@ public class MyLocationListener implements LocationListener {
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
-//        Log.d(TAG, "onLocationChanged: " + location);
         mapsActivity.updateLocation(location);
     }
 }

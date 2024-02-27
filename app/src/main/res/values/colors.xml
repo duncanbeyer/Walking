@@ -8,7 +8,7 @@
     <color name="reg_blue">#1976d2</color>
     <color name="dark_blue">#0d47a1</color>
     <color name="light_blue">#bbdefb</color>
-    <color name="light_gray_text">#6A6A6A</color>
+    <color name="light_gray_text">#BCBCBC</color>
     <color name="yellow">#FFCC13</color>
     <color name="light_yellow">#FFF0B9</color>
 </resources>

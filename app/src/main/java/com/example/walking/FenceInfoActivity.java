@@ -34,7 +34,7 @@ public class FenceInfoActivity extends AppCompatActivity {
             fd = getIntent().getParcelableExtra("BUILDING");
         }
         else {
-            Log.d(TAG,"no fence data.");
+            Log.d(TAG,"No fence data.");
             return;
         }
 
