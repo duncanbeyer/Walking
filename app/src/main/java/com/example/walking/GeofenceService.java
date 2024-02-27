@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -11,7 +12,6 @@ import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import android.app.PendingIntent;
 
@@ -34,6 +34,7 @@ public class GeofenceService extends Service {
     private PendingIntent geofencePendingIntent;
     private GeofencingClient geofencingClient;
     public static HashMap<String, FenceData> fences = new HashMap<String, FenceData>();
+    public static final String STOP = "STOP";
 
     @Override
     public void onCreate() {
@@ -47,7 +48,6 @@ public class GeofenceService extends Service {
                 .addOnFailureListener(this.getMainExecutor(),
                         e -> {
                             Log.d(TAG, "onFailure: removeGeofences: ", e);
-                            Toast.makeText(this, "Trouble removing existing fences: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         });
 
         // Since we need to post a notification, we first create a channel
@@ -79,8 +79,21 @@ public class GeofenceService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand called in GeofenceService.");
-        // This Toast is just to let you know that the service has started.
-        Toast.makeText(this, "SERVICE STARTED", Toast.LENGTH_LONG).show();
+
+        if (intent != null) {
+            String action = intent.getAction();
+            if (GeofenceService.STOP.equals(action)) {
+                Log.d(TAG,"stopping GeofenceService.");
+                NotificationManager notificationManager = (NotificationManager) this
+                        .getSystemService(Context.NOTIFICATION_SERVICE);
+
+                if (notificationManager != null) {
+                    notificationManager.cancelAll();
+                }
+                onDestroy();
+            }
+        }
+
 
         fences = (HashMap<String, FenceData>) intent.getSerializableExtra("FENCES");
         Log.d(TAG,"just init fences in GeofenceService");
@@ -114,7 +127,7 @@ public class GeofenceService extends Service {
                         fd.getLatLng().latitude,
                         fd.getLatLng().longitude,
                         fd.getRadius())
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE) //Fence expires after N millis  -or- Geofence.NEVER_EXPIRE
                 .build();
 
@@ -163,8 +176,7 @@ public class GeofenceService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy: ");
-        Toast.makeText(this, "SERVICE DESTROYED", Toast.LENGTH_LONG).show();
+        Log.d(TAG, "onDestroy in GeofenceService");
 
         super.onDestroy();
     }

@@ -10,6 +10,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import android.Manifest;
+import android.app.NotificationManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.app.AlertDialog;
@@ -28,7 +29,6 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -38,6 +38,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.LatLng;
@@ -77,7 +78,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FenceManager fenceMgr;
     private Polyline polyline1;
     private Polyline polyline2;
-    private boolean travelVisibility = false;
+    private boolean travelVisibility = true;
     private Location prevLocation;
     private static final int LOCATION_REQUEST = 111;
     private static final int BACKGROUND_LOCATION_REQUEST = 222;
@@ -98,6 +99,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     CheckBox tourPathCheckBox;
     CheckBox addressCheckBox;
     CheckBox travelPathCheckBox;
+    private boolean destroyed = false;
+    boolean showAddress = true;
+    ArrayList<Circle> circles = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,8 +144,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     Log.d(TAG,"checked geofenceCheckBox");
+                    showCircles();
                 } else {
                     Log.d(TAG,"UNchecked geofenceCheckBox");
+                    clearCircles();
                 }
             }
         });
@@ -150,9 +156,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    Log.d(TAG,"checked addressCheckBox");
+                    showAddress();
                 } else {
-                    Log.d(TAG,"UNchecked addressCheckBox");
+                    clearAddress();
                 }
             }
         });
@@ -162,17 +168,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     Log.d(TAG,"checked tourPathCheckBox");
-                    if (polyline2 == null) {
-                        drawTourPath();
-                    }
-                    else {
-                        polyline2.setVisible(true);
-                    }
+                    polyline2.setVisible(true);
                 } else {
                     Log.d(TAG,"UNchecked tourPathCheckBox");
-                    if (polyline2 != null) {
-                        polyline2.setVisible(false);
-                    }
+                    polyline2.setVisible(false);
                 }
             }
         });
@@ -197,6 +196,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+    private void clearCircles() {
+        for (Circle c : circles) {
+            c.setVisible(false);
+        }
+    }
+
+    private void showCircles() {
+        for (Circle c : circles) {
+            c.setVisible(true);
+        }
+    }
+
+    private void showAddress() {
+        showAddress = true;
+    }
+
+    private void clearAddress() {
+        showAddress = false;
+    }
+
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
@@ -207,6 +226,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMapToolbarEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
+
 
         if (checkPermission()) {
             setupLocationListener();
@@ -261,17 +281,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         fenceMgr.addFence(fd);
         fences.add(fd);
         fencesHash.put(fd.getId(),fd);
-
         // Just to see the fence
         int line = fd.getFenceColor();
         int fill = ColorUtils.setAlphaComponent(line, 50);
 
-        mMap.addCircle(new CircleOptions()
+        circles.add(mMap.addCircle(new CircleOptions()
                 .center(fd.getLatLng())
                 .radius(fd.getRadius())
                 .strokePattern(pattern)
                 .strokeColor(line)
-                .fillColor(fill));
+                .fillColor(fill)));
     }
 
 
@@ -310,6 +329,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             prevLocation = location;
         }
 
+        if (destroyed) {
+            Log.d(TAG,"update location after destroyed");
+        }
+
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         doAddress(latLng);
         latLonHistory.add(latLng); // Add the LL to our location history
@@ -319,7 +342,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         if (latLonHistory.size() == 1) { // First update
-            mMap.addMarker(new MarkerOptions().alpha(0.5f).position(latLng).title("My Origin"));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             return;
         }
@@ -407,6 +429,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void doAddress(LatLng ll) {
+        if (!showAddress) {
+            if (locationText.getText().length() > 0) {
+                locationText.setText("");
+            }
+            return;
+        }
         try {
 
             List<Address> addresses;
@@ -419,9 +447,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     (ad.getAdminArea() == null ? "" : ad.getAdminArea()),
                     (ad.getPostalCode() == null ? "" : ad.getPostalCode()),
                     (ad.getCountryName() == null ? "" : ad.getCountryName()));
-            locationText.setText(a);
+
+            if (ad.getSubThoroughfare() == null | ad.getThoroughfare() == null) {
+                locationText.setText(ll.toString());
+            }
+            else {
+                locationText.setText(a);
+            }
+
         } catch (Exception e) {
             Log.d(TAG,"Error in doAddress: ", e);
+            locationText.setText(ll.toString());
         }
 
 
@@ -527,6 +563,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             startGeoService();
+            drawTourPath();
+
 
         } catch (Exception e) {
             Log.d(TAG, "Exception loading JSON: " + e);
@@ -550,8 +588,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onDestroy() {
+        Log.d(TAG,"onDestroy called in mapsactivity");
 
         locationManager.removeUpdates(locationListener);
+
+        destroyed = true;
+        stopGeoService();
+        GeoReceiver.clearAllNotifications(this);
+
         super.onDestroy();
 
     }
@@ -561,7 +605,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "NEED BASIC PERMS FIRST!", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -572,7 +615,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     BACKGROUND_LOCATION_REQUEST);
             Log.d(TAG,"just requested background");
         } else {
-            Toast.makeText(this, "ALREADY HAS BACKGROUND LOC PERMS", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -592,4 +634,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         screenHeight = displayMetrics.heightPixels;
         screenWidth = displayMetrics.widthPixels;
     }
+
+    private void stopGeoService() {
+        Intent intent = new Intent(this, GeofenceService.class);
+        intent.setAction(GeofenceService.STOP);
+        stopService(intent);
+    }
+
+
 }

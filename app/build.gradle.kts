@@ -43,6 +43,7 @@ dependencies {
     implementation("com.google.maps.android:android-maps-utils:0.5")
 
     implementation ("com.android.volley:volley:1.2.1")
+    implementation("com.squareup.picasso:picasso:2.8")
 
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 

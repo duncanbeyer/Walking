@@ -23,6 +23,7 @@ public class GeoReceiver extends BroadcastReceiver {
 
     private static final String TAG = "GeoReceiver";
     private static final String CHANNEL_ID = "FENCE_CHANNEL";
+    static boolean closed = false;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -30,7 +31,9 @@ public class GeoReceiver extends BroadcastReceiver {
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
 
-
+        if (closed) {
+            return;
+        }
         if (geofencingEvent == null) {
             Log.d(TAG, "onReceive: NULL GeofencingEvent received");
             return;
@@ -117,6 +120,21 @@ public class GeoReceiver extends BroadcastReceiver {
 
     private static int getUniqueId() {
         return(int) (System.currentTimeMillis() % 10000);
+    }
+
+
+    public static void clearAllNotifications(Context context) {
+
+        Log.d(TAG,"clearAllNotifications called");
+
+        closed = true;
+
+        NotificationManager notificationManager = (NotificationManager) context
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager != null) {
+            notificationManager.cancelAll();
+        }
     }
 
 }
