@@ -53,14 +53,21 @@
             android:value="AIzaSyBJapDXaU30DMPej5XBnutojU2kdAZwJMs" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name=".SplashActivity"
             android:exported="true"
-            android:label="@string/title_activity_maps" >
+            android:theme="@style/Theme.App.Starting"
+            android:label="Splash Screen Activity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".MapsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_maps" >
+
         </activity>
         <activity
             android:name=".FenceInfoActivity"

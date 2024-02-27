@@ -280,6 +280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         FenceData fd = new FenceData(j);
         fenceMgr.addFence(fd);
         fences.add(fd);
+        Log.d(TAG,"added " + fd.getId());
         fencesHash.put(fd.getId(),fd);
         // Just to see the fence
         int line = fd.getFenceColor();
@@ -299,6 +300,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void downloadFailed(String s) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Geofence Download Failed");
+        builder.setMessage(s);
         builder.setMessage(s);
         builder.setPositiveButton("ok", (dialog, id) -> finish());
         AlertDialog dialog = builder.create();
@@ -355,7 +357,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             llHistoryPolyline = mMap.addPolyline(polylineOptions);
             llHistoryPolyline.setEndCap(new RoundCap());
             llHistoryPolyline.setWidth(8);
-            llHistoryPolyline.setColor(Color.BLUE);
+            llHistoryPolyline.setColor(getColor(R.color.dark_green));
             if (travelVisibility) {
                 llHistoryPolyline.setVisible(true);
             }
@@ -551,7 +553,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             for (int i = 0;i < fencesArr.length();i++) {
                 addFence(fencesArr.getJSONObject(i));
             }
-            Log.d(TAG, "just added fences");
             String s;
             String[] parts;
             LatLng l;

@@ -140,8 +140,6 @@ public class GeofenceService extends Service {
 
         geofencingClient
                 .addGeofences(geofencingRequest, geofencePendingIntent)
-                .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "onSuccess: addGeofences"))
                 .addOnFailureListener(e -> {
                     e.printStackTrace();
                     Log.d(TAG, "onFailure: addGeofences: " + e.getMessage());
