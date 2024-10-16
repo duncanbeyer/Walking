@@ -1,4 +1,4 @@
-This project was a completed assignement due towards the end of the DePaul University Android Software Development program.  
+This project was a completed assignment due towards the end of the DePaul University Android Software Development program.  
 
 The app is a walking tour for downtown Chicago.  It uses geolocation and google services to track the user's location.
 A path tells the user where they should walk to. Geofences notify the user when they are approaching a landmark.
